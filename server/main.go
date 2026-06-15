@@ -1,46 +1,55 @@
 package main
 
-import (
-	"fmt"
-)
+import "fmt"
 
-func sort(s []int, x int) int {
-	for i := 0; i < len(s)-1; i++ {
-		for j := 0; j < len(s)-1; j++ {
-			if s[j] > s[j+1] {
-				s[j], s[j+1] = s[j+1], s[j]
-			}
-		}
-	}
-	halfLenght := len(s) / 2
-	mid := s[halfLenght]
-	if x != mid {
-		if x < mid {
-			for i := 0; i < (halfLenght); i++ {
-				if x == s[i] {
-					return i
-				}
-			}
+func findMedianSortedArrays(nums1 []int, nums2 []int) float64 {
+	i, j := 0, 0
+	comMedian := []int{}
+	for i < len(nums1) || j < len(nums2) {
+		if i >= len(nums1) {
+			comMedian = append(comMedian, nums2[j])
+			j++
+
+		} else if j >= len(nums2) {
+			comMedian = append(comMedian, nums1[i])
+			i++
+
+		} else if nums1[i] < nums2[j] {
+			comMedian = append(comMedian, nums1[i])
+
+			i++
 
 		} else {
-			for j := halfLenght + 1; j < len(s); j++ {
-				if x == s[j] {
-					return j
-				}
-
-			}
+			comMedian = append(comMedian, nums2[j])
+			j++
 		}
-
-	} else {
-		return halfLenght
 	}
-	return -1
-	
+
+	// fmt.Println(comMedian)
+	n := len(comMedian)
+	if n%2 == 0 {
+
+		return float64((comMedian[n/2-1] + comMedian[n/2])) / 2
+	}
+
+	return float64(comMedian[n/2])
+
 }
 
 func main() {
-	arr := []int{4, 2, 5, 1, 6, 7,32, 14, 12,14}
-	s := sort(arr, 32)
-	fmt.Println(s)
-	// fmt.Println(r)
+	y := "bbaabb"
+	fmt.Println(isPalindrome(y))
+}
+
+func isPalindrome(s string) bool {
+	for i, j := 0, len(s)-1; i <j; {
+		if s[i] != s[j] {
+			return false
+		}
+		i++
+		j--
+
+	}
+	return true
+
 }

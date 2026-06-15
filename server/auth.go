@@ -27,7 +27,7 @@ func AuthenticateUser(username, password string) error {
 
 	}
 	if u.Password != password {
-		return fmt.Errorf("Invalid password!")
+		return fmt.Errorf("Invalid password! mf")
 	}
 	return nil
 
