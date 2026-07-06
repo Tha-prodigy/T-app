@@ -9,6 +9,10 @@ var (
 	// use mutex to prevent concurrent actions from accessing shared resources at a time
 	mu sync.RWMutex
 
+	// This is a shared resource that multiple online users can access at the same time via multiple Goroutines
+	// and as a result mulptiple read and write actions can be performed on this map simultanously which can cause program to crash due to data race .
+	// Hence we use RWMutex which has two lock types; Lock() and RLock() and two unlocks; RUnlock() and Unlock()
+	// best practice is to use Lock() for write actions and use RLock() for read actions for optimal performance.
 	activeUsers = make(map[string]net.Conn)
 )
 

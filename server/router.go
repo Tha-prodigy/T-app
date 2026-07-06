@@ -2,17 +2,25 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 )
 
 func HandleConnection(conn net.Conn) {
 	defer conn.Close()
-	var msg Message
-	if err := json.NewDecoder(conn).Decode(&msg); err != nil {
-		return
+
+	decoder := json.NewDecoder(conn)
+
+	for {
+		var msg Message
+		err := decoder.Decode(msg)
+		if err != nil {
+			fmt.Println("failed to decode incomming json into msg")
+			return
+		}
+		RouteMessage(msg, conn)
 
 	}
-	RouteMessage(msg, conn)
 
 }
 
@@ -72,10 +80,8 @@ func handleOnline(conn net.Conn) {
 
 func sendResponse(conn net.Conn, responseType, msg string) {
 	resp := Response{
-		Type: responseType,
+		Type:    responseType,
 		Message: msg,
 	}
 	json.NewEncoder(conn).Encode(resp)
 }
-
-
