@@ -21,7 +21,7 @@ func main() {
 			log.Println(err2)
 			return
 		}
-		HandleConnection(conn)
+		go HandleConnection(conn)
 
 	}
 
