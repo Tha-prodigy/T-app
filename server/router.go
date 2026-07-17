@@ -11,78 +11,109 @@ func HandleConnection(conn net.Conn) {
 	defer conn.Close()
 
 	decoder := json.NewDecoder(conn)
+	client := &Client{
+		Conn: conn,
+	}
 
 	for {
 		var msg protocol.Message
+
 		err := decoder.Decode(&msg)
+
 		if err != nil {
-			fmt.Println("failed to decode incomming json into msg")
+			fmt.Println("failed to decode incomming json into msg, due to client disconnection")
+			if client.Username != "" {
+				DeleteClient(client.Username)
+
+			}
+
 			return
 		}
-		RouteMessage(msg, conn)
+		RouteMessage(msg, client)
 
 	}
 
 }
 
-func RouteMessage(msg protocol.Message, conn net.Conn) {
+func RouteMessage(msg protocol.Message, client *Client) {
 	switch msg.Type {
 	case protocol.RegisterType:
-		handleRegister(conn, msg)
+		handleRegister(client, msg)
 	case protocol.LoginType:
-		handleLogin(conn, msg)
+		handleLogin(client, msg)
 	case protocol.SendType:
-		handleSend(conn, msg)
+		handleSend(client, msg)
 	case protocol.OnlineType:
-		handleOnline(conn)
+		handleOnline(client)
+	case protocol.LogoutType:
+		DeleteClient(client.Username)
+		client.Conn.Close()
+
 	}
 
 }
 
-func handleRegister(conn net.Conn, msg protocol.Message) {
+func handleRegister(client *Client, msg protocol.Message) {
 	err := RegisterUser(msg.Username, msg.Password)
 	if err != nil {
-		sendResponse(conn, protocol.ErrorType, err.Error())
+		sendResponse(client.Conn, protocol.ErrorType, err.Error())
 		return
 	}
-	sendResponse(conn, protocol.SuccessType, "registeration succesful")
+	sendResponse(client.Conn, protocol.SuccessType, "registeration succesful")
 }
 
-func handleLogin(conn net.Conn, msg protocol.Message) {
+func handleLogin(client *Client, msg protocol.Message) {
 	if err := AuthenticateUser(msg.Username, msg.Password); err != nil {
-		sendResponse(conn, protocol.ErrorType, err.Error())
+		sendResponse(client.Conn, protocol.ErrorType, err.Error())
 		return
 	}
-	sendResponse(conn, protocol.SuccessType, "login successful")
+	client.Username = msg.Username
+	AddClient(client)
+	sendResponse(client.Conn, protocol.SuccessType, "login successful")
 }
 
-func handleSend(conn net.Conn, msg protocol.Message) {
+func handleSend(sender *Client, msg protocol.Message) {
 	// get user connection object
-	resConn, exist := GetUserConnection(msg.To)
+	res, exist := GetUserConnection(msg.To)
 	if !exist {
-		sendResponse(conn, protocol.ErrorType, "User offline!")
+		sendResponse(sender.Conn, protocol.ErrorType, "User offline!")
 		return
 	}
-	// convert msg to json and write into resConn
-	json.NewEncoder(resConn).Encode(msg)
+
+	// Overwrite the sender's username with their actual username
+	msg.From = sender.Username
+
+	// validate client's online status first
+	if sender.Username == "" {
+		sendResponse(sender.Conn, protocol.ErrorType, "Please login first")
+		return
+	}
+	// convert msg to json and write into resipient Conn
+	json.NewEncoder(res.Conn).Encode(msg)
 
 }
 
-func handleOnline(conn net.Conn) {
+func handleOnline(client *Client) {
 	users := ListUsers()
 	resp := protocol.Message{
 		Type:  protocol.OnlineType,
 		Users: users,
 	}
+
+	// Validate client's online status fiest
+	if client.Username == "" {
+		sendResponse(client.Conn, protocol.ErrorType, "Please login first")
+		return
+	}
 	// convert resp to json and write it into conn
-	json.NewEncoder(conn).Encode(resp)
+	json.NewEncoder(client.Conn).Encode(resp)
 
 }
 
 func sendResponse(conn net.Conn, responseType, msg string) {
 	resp := protocol.Message{
-		Type:    responseType,
-		Message: msg,
+		Type:   responseType,
+		Status: msg,
 	}
 	json.NewEncoder(conn).Encode(resp)
 }

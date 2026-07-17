@@ -5,6 +5,11 @@ import (
 	"sync"
 )
 
+type Client struct {
+	Username string
+	Conn     net.Conn
+}
+
 var (
 	// use mutex to prevent concurrent actions from accessing shared resources at a time
 	mu sync.RWMutex
@@ -13,14 +18,14 @@ var (
 	// and as a result mulptiple read and write actions can be performed on this map simultanously which can cause program to crash due to data race .
 	// Hence we use RWMutex which has two lock types; Lock() and RLock() and two unlocks; RUnlock() and Unlock()
 	// best practice is to use Lock() for write actions and use RLock() for read actions for optimal performance.
-	activeUsers = make(map[string]net.Conn)
+	activeUsers = make(map[string]*Client)
 )
 
 // records users that are online. Each user has it's own tcp connection
-func AddClient(username string, conn net.Conn) {
+func AddClient(client *Client) {
 	mu.Lock()
 	defer mu.Unlock()
-	activeUsers[username] = conn
+	activeUsers[client.Username] = client
 
 }
 
@@ -32,11 +37,11 @@ func DeleteClient(userName string) {
 }
 
 // get users connection line and connection status to know how to reach each user
-func GetUserConnection(username string) (net.Conn, bool) {
+func GetUserConnection(username string) (*Client, bool) {
 	mu.RLock()
 	defer mu.RUnlock()
-	conn, exist := activeUsers[username]
-	return conn, exist
+	client, exist := activeUsers[username]
+	return client, exist
 
 }
 
