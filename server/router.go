@@ -56,27 +56,27 @@ func RouteMessage(msg protocol.Message, client *Client) {
 func handleRegister(client *Client, msg protocol.Message) {
 	err := RegisterUser(msg.Username, msg.Password)
 	if err != nil {
-		sendResponse(client.Conn, protocol.ErrorType, err.Error())
+		sendResponse(client.Conn, protocol.ErrorType, err.Error(), "")
 		return
 	}
-	sendResponse(client.Conn, protocol.SuccessType, "registeration succesful")
+	sendResponse(client.Conn, protocol.SuccessType, "registeration succesful", "")
 }
 
 func handleLogin(client *Client, msg protocol.Message) {
 	if err := AuthenticateUser(msg.Username, msg.Password); err != nil {
-		sendResponse(client.Conn, protocol.ErrorType, err.Error())
+		sendResponse(client.Conn, protocol.ErrorType, err.Error(), "")
 		return
 	}
 	client.Username = msg.Username
 	AddClient(client)
-	sendResponse(client.Conn, protocol.SuccessType, "login successful")
+	sendResponse(client.Conn, protocol.SuccessType, "login successful", msg.Username)
 }
 
 func handleSend(sender *Client, msg protocol.Message) {
 	// get user connection object
 	res, exist := GetUserConnection(msg.To)
 	if !exist {
-		sendResponse(sender.Conn, protocol.ErrorType, "User offline!")
+		sendResponse(sender.Conn, protocol.ErrorType, "User offline!", "")
 		return
 	}
 
@@ -85,7 +85,7 @@ func handleSend(sender *Client, msg protocol.Message) {
 
 	// validate client's online status first
 	if sender.Username == "" {
-		sendResponse(sender.Conn, protocol.ErrorType, "Please login first")
+		sendResponse(sender.Conn, protocol.ErrorType, "Please login first", msg.Username)
 		return
 	}
 	// convert msg to json and write into resipient Conn
@@ -102,7 +102,7 @@ func handleOnline(client *Client) {
 
 	// Validate client's online status fiest
 	if client.Username == "" {
-		sendResponse(client.Conn, protocol.ErrorType, "Please login first")
+		sendResponse(client.Conn, protocol.ErrorType, "Please login first", "")
 		return
 	}
 	// convert resp to json and write it into conn
@@ -110,10 +110,11 @@ func handleOnline(client *Client) {
 
 }
 
-func sendResponse(conn net.Conn, responseType, msg string) {
+func sendResponse(conn net.Conn, responseType, msg, username string) {
 	resp := protocol.Message{
 		Type:   responseType,
 		Status: msg,
+		Username: username,
 	}
 	json.NewEncoder(conn).Encode(resp)
 }
